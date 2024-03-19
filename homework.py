@@ -1,11 +1,12 @@
+import logging
 import os
 import time
-import requests
-from dotenv import load_dotenv
-import telegram
-from sys import stdout
-import logging
 from http import HTTPStatus
+from sys import stdout
+
+import requests
+import telegram
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -27,9 +28,8 @@ HOMEWORK_VERDICTS = {
 
 
 def check_tokens():
-    '''
-    change
-    '''
+    '''Проверка на присутствие обязательных переменных окружения'''
+    
     must_have_tokens = [PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]
     for token in must_have_tokens:
         if not token:
@@ -38,51 +38,54 @@ def check_tokens():
 
 
 def send_message(bot, message):
-    '''
-    change
-    '''
+    '''Отправка сообщения в телеграм-чат бота и пользователя'''
+
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
         logging.debug('Cool!')
+
     except Exception as error:
         message = f'Сбой в отправке сообщения ботом: {error}'
         logging.error(message)
 
 
 def get_api_answer(timestamp):
-    '''
-    change
-    '''
+    '''Отправка get запроса API, обработка полученного ответа'''
+
     payload = {'from_date': timestamp}
 
     try:
         homework = requests.get(ENDPOINT, headers=HEADERS, params=payload)
+
         if homework.status_code == HTTPStatus.OK:
             return homework.json()
+
         elif homework.status_code == HTTPStatus.BAD_REQUEST:
             message = homework.error
             logging.error(message)
             raise Exception(message)
+
         elif homework.status_code == HTTPStatus.UNAUTHORIZED:
             message = f'{homework.code} {homework.message}'
             logging.error(message)
             raise Exception(message)
+
         elif homework.status_code == HTTPStatus.NOT_FOUND:
             message = f'Недоступность эндпоинта: {ENDPOINT}'
             logging.error(message)
             raise Exception(message)
+
         else:
             message = homework
             logging.error(message)
             raise Exception(message)
-    
+
     except requests.RequestException as e:
             logging.error(e)
     
 def check_response(response):
-    '''
-    change
-    '''
+    '''Проверка полученного ответа на соответствие типам и структуре предполагаемого ответа'''
+
     must_have_keys = ('homeworks', 'current_date')
 
     if not isinstance(response, dict):
@@ -100,19 +103,22 @@ def check_response(response):
         message = 'В ответе API под ключом "homeworks" данные приходят не в виде списка'
         logging.error(message)
         raise TypeError(message)
+
     return True
 
 
 def parse_status(homework):
     '''
-    change
+    Обработка статуса полученной домашки, создание сообщения 
+    для отправки в телеграм-бота в соответствии с полученным статусом
     '''
+
     status = homework.get('status')
     if not status:
         message = f'No "status" key in homework'
         logging.error(message)
         raise Exception(message)
-    
+
     verdict = HOMEWORK_VERDICTS.get(status)
     if verdict:
         homework_name = homework.get('homework_name')
@@ -121,6 +127,7 @@ def parse_status(homework):
             logging.error(message)
             raise Exception(message)
         return f'Изменился статус проверки работы "{homework_name}". {verdict}'
+
     else:
         message = f'Unknown HOMEWORK_VERDICTS key – {verdict}'
         logging.error('Неизвестный статус проверки домашней работы. {message}')
@@ -137,7 +144,7 @@ def main():
 
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time())
-    
+
     check_tokens()
 
     while True:
