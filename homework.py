@@ -29,19 +29,23 @@ HOMEWORK_VERDICTS = {
 
 def check_tokens():
     """Проверка на присутствие обязательных переменных окружения."""
-    must_have_tokens = [PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]
-    for token in must_have_tokens:
-        if not token:
-            logging.critical('Отсустсвует обязательная переменная окружения'
-                             ' {token}')
-            raise Exception('No required enviroment variable {token}')
+    must_have_tokens = {
+        'PRACTICUM_TOKEN': PRACTICUM_TOKEN,
+        'TELEGRAM_TOKEN': TELEGRAM_TOKEN,
+        'TELEGRAM_CHAT_ID': TELEGRAM_CHAT_ID
+    }
+    for token, token_val in must_have_tokens.items():
+        if not token_val:
+            message = f'Отсустсвует обязательная переменная окружения {token}'
+            logging.critical(message)
+            raise Exception(message)
 
 
 def send_message(bot, message):
     """Отправка сообщения в телеграм-чат бота и пользователя."""
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
-        logging.debug('Cool!')
+        logging.debug('Сообщение в телеграм-чат отправлено')
 
     except Exception as error:
         message = f'Сбой в отправке сообщения ботом: {error}'
@@ -94,7 +98,7 @@ def check_response(response):
 
     for key in must_have_keys:
         if key not in response:
-            message = f'No key {key} in response'
+            message = f'Нет ключа {key} в ответе API'
             logging.error('Нет обязательных ключей в ответе API. {message}')
             raise Exception(message)
 
@@ -114,7 +118,7 @@ def parse_status(homework):
     """
     status = homework.get('status')
     if not status:
-        message = 'No "status" key in homework'
+        message = 'Отсутствует "status" ключ в домашке'
         logging.error(message)
         raise Exception(message)
 
@@ -128,7 +132,7 @@ def parse_status(homework):
         return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
     else:
-        message = f'Unknown HOMEWORK_VERDICTS key – {verdict}'
+        message = f'Неизвестный HOMEWORK_VERDICTS ключ – {verdict}'
         logging.error('Неизвестный статус проверки домашней работы. {message}')
         raise Exception(message)
 
