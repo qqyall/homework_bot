@@ -28,18 +28,17 @@ HOMEWORK_VERDICTS = {
 
 
 def check_tokens():
-    '''Проверка на присутствие обязательных переменных окружения'''
-    
+    """Проверка на присутствие обязательных переменных окружения."""
     must_have_tokens = [PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]
     for token in must_have_tokens:
         if not token:
-            logging.critical('Отсустсвует обязательная переменная окружения {token}')
+            logging.critical('Отсустсвует обязательная переменная окружения'
+                             ' {token}')
             raise Exception('No required enviroment variable {token}')
 
 
 def send_message(bot, message):
-    '''Отправка сообщения в телеграм-чат бота и пользователя'''
-
+    """Отправка сообщения в телеграм-чат бота и пользователя."""
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
         logging.debug('Cool!')
@@ -50,8 +49,7 @@ def send_message(bot, message):
 
 
 def get_api_answer(timestamp):
-    '''Отправка get запроса API, обработка полученного ответа'''
-
+    """Отправка get запроса API, обработка полученного ответа."""
     payload = {'from_date': timestamp}
 
     try:
@@ -81,15 +79,16 @@ def get_api_answer(timestamp):
             raise Exception(message)
 
     except requests.RequestException as e:
-            logging.error(e)
-    
-def check_response(response):
-    '''Проверка полученного ответа на соответствие типам и структуре предполагаемого ответа'''
+        logging.error(e)
 
+
+def check_response(response):
+    """Проверка полученного ответа на соответствие типам."""
     must_have_keys = ('homeworks', 'current_date')
 
     if not isinstance(response, dict):
-        message = 'В ответе API структура данных не соответствует ожиданиям, ожидался тип данных dict'
+        message = ('В ответе API структура данных не соответствует ожиданиям,'
+                   'ожидался тип данных dict')
         logging.error(message)
         raise TypeError(message)
 
@@ -100,7 +99,8 @@ def check_response(response):
             raise Exception(message)
 
     if not isinstance(response['homeworks'], list):
-        message = 'В ответе API под ключом "homeworks" данные приходят не в виде списка'
+        message = ('В ответе API под ключом "homeworks"'
+                   ' данные приходят не в виде списка')
         logging.error(message)
         raise TypeError(message)
 
@@ -108,14 +108,13 @@ def check_response(response):
 
 
 def parse_status(homework):
-    '''
-    Обработка статуса полученной домашки, создание сообщения 
-    для отправки в телеграм-бота в соответствии с полученным статусом
-    '''
-
+    """Обработка статуса полученной домашки.
+    Cоздание сообщения для отправки в телеграм-бота
+    в соответствии с полученным статусом.
+    """
     status = homework.get('status')
     if not status:
-        message = f'No "status" key in homework'
+        message = 'No "status" key in homework'
         logging.error(message)
         raise Exception(message)
 
@@ -133,9 +132,9 @@ def parse_status(homework):
         logging.error('Неизвестный статус проверки домашней работы. {message}')
         raise Exception(message)
 
+
 def main():
     """Основная логика работы бота."""
-
     logging.basicConfig(
         level=logging.DEBUG,
         format='%(asctime)s, %(levelname)s, %(message)s',
