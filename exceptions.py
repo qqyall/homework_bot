@@ -1,3 +1,6 @@
+from http import HTTPStatus
+
+
 class EmptyResponseAPI(Exception):
     """Исключение при возникновении проблем с получением ответа."""
 
@@ -18,16 +21,18 @@ class EnvironmentVariableMissing(Exception):
         return self.msg
 
 
-class BadRequestExeption(Exception):
-    """Получен ответ с кодом 400."""
+class NotOkResponseStatusExeption(Exception):
+    """Получен ответ с кодом, отличным от 200"""
 
+    excepted_status = HTTPStatus.OK
+    
+    def __init__(self, got_status):
+        self.msg = (f'При отправке запроса к API '
+                    f'ожидался статус {self.excepted_status}\n'
+                    f'Получен статус {got_status}')
 
-class UnauthorizedExeption(Exception):
-    """Получен ответ с кодом 401."""
-
-
-class NotFoundExeption(Exception):
-    """Получен ответ с кодом 404."""
+    def __str__(self):
+        return self.msg
 
 
 class RequestError(Exception):

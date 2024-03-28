@@ -7,9 +7,9 @@ from sys import stdout
 import requests
 import telegram
 from dotenv import load_dotenv
+
 from exceptions import (EmptyResponseAPI, EnvironmentVariableMissing,
-                        BadRequestExeption, UnauthorizedExeption,
-                        NotFoundExeption, RequestError)
+                        NotOkResponseStatusExeption, RequestError)
 
 load_dotenv()
 
@@ -37,11 +37,15 @@ def check_tokens():
         'TELEGRAM_TOKEN': TELEGRAM_TOKEN,
         'TELEGRAM_CHAT_ID': TELEGRAM_CHAT_ID
     }
+    missed_tokens = []
     for token, token_val in must_have_tokens.items():
         if not token_val:
-            message = f'Отсустсвует обязательная переменная окружения {token}'
-            logging.critical(message)
-            raise EnvironmentVariableMissing(token)
+            missed_tokens.append(token)
+
+    if missed_tokens:
+        message = f'Отсустсвует обязательная переменная окружения {token}'
+        logging.critical(message)
+        raise EnvironmentVariableMissing(token)
 
 
 def send_message(bot, message):
@@ -71,20 +75,10 @@ def get_api_answer(timestamp):
     try:
         homework = requests.get(**request_kwargs)
 
-        if homework.status_code == HTTPStatus.OK:
-            return homework.json()
+        if homework.status_code != HTTPStatus.OK:
+            raise NotOkResponseStatusExeption(homework.status_code)
 
-        elif homework.status_code == HTTPStatus.BAD_REQUEST:
-            raise BadRequestExeption
-
-        elif homework.status_code == HTTPStatus.UNAUTHORIZED:
-            raise UnauthorizedExeption
-
-        elif homework.status_code == HTTPStatus.NOT_FOUND:
-            raise NotFoundExeption
-        else:
-            message = homework
-            raise Exception(message)
+        return homework.json()
 
     except requests.RequestException as error:
         raise RequestError(error)
@@ -102,9 +96,8 @@ def check_response(response):
 
     for key in must_have_keys:
         if key not in response:
-            message = f'Нет ключа {key} в ответе API'
-            logging.error(f'Нет обязательных ключей в ответе API. {message}')
-            raise EmptyResponseAPI(response)
+            message = (f'Нет обязательных ключей в ответе API. {message}')
+            raise EmptyResponseAPI(message)
 
     response_homeworks = response.get('homeworks')
     if not isinstance(response_homeworks, list):
@@ -122,19 +115,17 @@ def parse_status(homework):
         message = 'Отсутствует "status" ключ в домашке'
         raise KeyError(message)
 
-    verdict = HOMEWORK_VERDICTS.get(status)
-    if verdict:
-        homework_name = homework.get('homework_name')
-        if not homework_name:
-            message = 'No "homework_name" key in homework'
-            raise Exception(message)
-        return f'Изменился статус проверки работы "{homework_name}". {verdict}'
+    homework_name = homework.get('homework_name')
+    if not homework_name:
+        message = 'No "homework_name" key in homework'
+        raise KeyError(message)
 
-    else:
+    verdict = HOMEWORK_VERDICTS.get(status)
+    if not verdict:
         message = f'Неизвестный HOMEWORK_VERDICTS ключ – {verdict}'
-        logging.error(
-            f'Неизвестный статус проверки домашней работы. {message}')
-        raise Exception(message)
+        raise KeyError(message)
+
+    return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
 def main():
@@ -149,24 +140,23 @@ def main():
         try:
             response = get_api_answer(timestamp)
             homeworks = check_response(response)
-            if homeworks:
-                if len(homeworks) > 0:
-                    homework = homeworks.pop(0)
-                    message = parse_status(homework)
-                else:
-                    message = 'Нет новых статусов'
-
+            if len(homeworks) > 0:
+                homework = homeworks[0]
+                message = parse_status(homework)
+            else:
+                message = 'Нет новых статусов'
             new_status = message
             if new_status != old_status:
                 old_status = new_status
                 send_message(bot, new_status)
-
             timestamp = response.get('current_date', timestamp)
         except EmptyResponseAPI as error:
             logging.error(error)
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
-            send_message(bot, message)
+            if new_status != old_status:
+                old_status = new_status
+                send_message(bot, new_status)
         finally:
             time.sleep(RETRY_PERIOD)
 
