@@ -44,7 +44,7 @@ def check_tokens():
 
     if token in missed_tokens:
         message = (f'Отсустсвует обязательные '
-                   f'0переменные окружения {' '.join(missed_tokens)}')
+                   f'переменные окружения {' '.join(missed_tokens)}')
         logging.critical(message)
         raise EnvironmentVariableMissing(' '.join(missed_tokens))
 
