@@ -42,10 +42,11 @@ def check_tokens():
         if not token_val:
             missed_tokens.append(token)
 
-    if missed_tokens:
-        message = f'Отсустсвует обязательная переменная окружения {token}'
+    if token in missed_tokens:
+        message = (f'Отсустсвует обязательные '
+                   f'0переменные окружения {' '.join(missed_tokens)}')
         logging.critical(message)
-        raise EnvironmentVariableMissing(token)
+        raise EnvironmentVariableMissing(' '.join(missed_tokens))
 
 
 def send_message(bot, message):
@@ -91,7 +92,6 @@ def check_response(response):
     if not isinstance(response, dict):
         message = ('В ответе API структура данных не соответствует ожиданиям,'
                    'ожидался тип данных dict')
-        logging.error(message)
         raise TypeError(message)
 
     for key in must_have_keys:
@@ -140,23 +140,23 @@ def main():
         try:
             response = get_api_answer(timestamp)
             homeworks = check_response(response)
-            if len(homeworks) > 0:
+            if homeworks:
                 homework = homeworks[0]
                 message = parse_status(homework)
             else:
                 message = 'Нет новых статусов'
-            new_status = message
-            if new_status != old_status:
-                old_status = new_status
-                send_message(bot, new_status)
+            if message != old_status:
+                old_status = message
+                send_message(bot, message)
             timestamp = response.get('current_date', timestamp)
         except EmptyResponseAPI as error:
             logging.error(error)
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
-            if new_status != old_status:
-                old_status = new_status
-                send_message(bot, new_status)
+            logging.error(error)
+            if message != old_status:
+                old_status = message
+                send_message(bot, message)
         finally:
             time.sleep(RETRY_PERIOD)
 
