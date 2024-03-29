@@ -47,7 +47,7 @@ def check_tokens():
         message = ('Отсустсвует обязательные '
                    f'переменные окружения {tokens}')
         logging.critical(message)
-        raise EnvironmentVariableMissing(' '.join(missed_tokens))
+        raise EnvironmentVariableMissing(tokens)
 
 
 def send_message(bot, message):
